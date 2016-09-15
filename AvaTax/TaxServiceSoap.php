@@ -26,6 +26,7 @@ namespace AvaTax;
 
 class TaxServiceSoap extends AvalaraSoapClient {
 
+    private $socketTimeout;
     static $servicePath = '/Tax/TaxSvc.asmx';
     static protected $classmap = array(
         'BaseAddress' => 'AvaTax\Address',
@@ -59,6 +60,12 @@ class TaxServiceSoap extends AvalaraSoapClient {
     );
 
     public function __construct($configurationName = 'Default', $options = array()) {
+        if (isset($options['socket_timeout'])) {
+            $this->socketTimeout = $options['socket_timeout'];
+            unset($options['socket_timeout']);
+        } else {
+            $this->socketTimeout = ini_get('default_socket_timeout');
+        }
         $config = new ATConfig($configurationName);
 
         $this->client = new DynamicSoapClient(
@@ -82,8 +89,12 @@ class TaxServiceSoap extends AvalaraSoapClient {
      * @throws SoapFault
      */
     public function getTax(&$getTaxRequest) {
+        $defaultTimeout = ini_get('default_socket_timeout');
+        ini_set('default_socket_timeout', $this->socketTimeout);
         $getTaxRequest->prepare();
-        return $this->client->GetTax(array('GetTaxRequest' => $getTaxRequest))->GetTaxResult;
+        $response = $this->client->GetTax(array('GetTaxRequest' => $getTaxRequest))->GetTaxResult;
+        ini_set('default_socket_timeout', $defaultTimeout);
+        return $response;
     }
 
     /**
